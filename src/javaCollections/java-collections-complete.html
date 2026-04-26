@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Java Collections — Interactive Hierarchy</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  --bg: #080b14;
+  --surface: #0e1320;
+  --panel-bg: #0a0e1a;
+  --border: #1a2035;
+  --I: #00c6ff;
+  --A: #ff7c40;
+  --C: #3ddc84;
+  --L: #b98fff;
+  --ext: #ffd166;
+  --imp: #ff6b9d;
+  --text: #c8d3e8;
+  --muted: #3d4f6e;
+  --card: #111827;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  user-select: none;
+}
+
+/* ── Header ── */
+#hdr {
+  position: fixed; top:0; left:0; right:0; z-index:300;
+  height: 50px;
+  background: rgba(8,11,20,0.97);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 1.5rem; padding: 0 1.2rem;
+}
+#hdr h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem; font-weight: 800;
+  background: linear-gradient(90deg, var(--I), var(--C));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+.leg { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+.li  { display:flex; align-items:center; gap:5px; font-size:0.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+.lb  { width:9px; height:9px; border-radius:2px; border:1.5px solid; }
+.lline { width:22px; height:2px; }
+
+.ctrl { margin-left:auto; display:flex; gap:6px; }
+.btn {
+  background: var(--surface); border:1px solid var(--border);
+  color:var(--text); font-family:'IBM Plex Mono',monospace;
+  font-size:0.58rem; padding:4px 10px; border-radius:4px; cursor:pointer;
+  transition:.15s;
+}
+.btn:hover { border-color:var(--I); color:var(--I); }
+
+/* ── Canvas ── */
+#wrap {
+  position: fixed; top:50px; left:0; right:0; bottom:0;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(0,198,255,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(61,220,132,0.03) 0%, transparent 50%),
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+  cursor: default;
+}
+#wrap.panning { cursor: grab; }
+
+#world { position:absolute; transform-origin:0 0; }
+
+/* ── SVG edges ── */
+#svg-edges {
+  position:absolute; top:0; left:0;
+  pointer-events:none; overflow:visible;
+}
+
+/* ── Nodes ── */
+.node {
+  position: absolute;
+  border-radius: 8px;
+  border: 1.5px solid;
+  cursor: grab;
+  z-index: 10;
+  transition: box-shadow .2s;
+  min-width: 148px;
+}
+.node:active { cursor: grabbing; z-index: 50; }
+.node.dragging { z-index: 50; }
+
+.node-head {
+  padding: 7px 10px 5px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.node-kind { font-size:.48rem; opacity:.6; letter-spacing:.08em; text-transform:uppercase; }
+.node-name { font-size:.68rem; font-weight:600; line-height:1.2; }
+.node-pkg  { font-size:.5rem; opacity:.5; }
+
+.node-body {
+  padding: 6px 10px 8px;
+  font-size: .55rem;
+  line-height: 1.55;
+  color: #8a99b8;
+  max-width: 220px;
+}
+.node-body .tag {
+  display: inline-block;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin: 1px 0;
+  color: #aab4cc;
+}
+.node-body .q { color: #ffd166; font-size:.5rem; margin-top:4px; display:block; }
+
+/* Type colours */
+.tI { border-color:var(--I); }
+.tI .node-head { background: rgba(0,198,255,0.06); }
+.tI .node-name { color: var(--I); }
+.tI:hover { box-shadow: 0 0 18px rgba(0,198,255,0.25); }
+
+.tA { border-color:var(--A); }
+.tA .node-head { background: rgba(255,124,64,0.06); }
+.tA .node-name { color: var(--A); }
+.tA:hover { box-shadow: 0 0 18px rgba(255,124,64,0.25); }
+
+.tC { border-color:var(--C); }
+.tC .node-head { background: rgba(61,220,132,0.06); }
+.tC .node-name { color: var(--C); }
+.tC:hover { box-shadow: 0 0 18px rgba(61,220,132,0.25); }
+
+.tL { border-color:var(--L); }
+.tL .node-head { background: rgba(185,143,255,0.06); }
+.tL .node-name { color: var(--L); }
+.tL:hover { box-shadow: 0 0 18px rgba(185,143,255,0.25); }
+
+/* ── Info panel (click) ── */
+#info-panel {
+  position: fixed; right:0; top:50px; bottom:0;
+  width: 340px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  z-index: 400;
+  transform: translateX(100%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+  padding: 1.2rem;
+}
+#info-panel.open { transform: translateX(0); }
+#info-panel h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem; font-weight: 800;
+  margin-bottom: 3px;
+}
+#info-panel .pkg { font-size:.6rem; color:var(--muted); margin-bottom:12px; }
+.info-section { margin-bottom:14px; }
+.info-section h3 {
+  font-size:.62rem; font-weight:600; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--muted);
+  margin-bottom:5px; padding-bottom:4px;
+  border-bottom:1px solid var(--border);
+}
+.info-section p, .info-section li {
+  font-size:.62rem; line-height:1.65; color:#8a99b8;
+}
+.info-section ul { padding-left:14px; }
+.info-section li { margin:2px 0; }
+.info-section code {
+  background:rgba(255,255,255,0.05);
+  padding:1px 5px; border-radius:3px;
+  color:#b0bdd4; font-size:.6rem;
+}
+.info-close {
+  position:absolute; top:10px; right:12px;
+  background:none; border:none; color:var(--muted);
+  font-size:1rem; cursor:pointer; line-height:1;
+}
+.info-close:hover { color:var(--text); }
+.complexity-row {
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;
+}
+.chip {
+  font-size:.55rem; padding:2px 7px; border-radius:10px;
+  background: rgba(255,255,255,0.05); color:#aab4cc;
+  border:1px solid rgba(255,255,255,0.08);
+}
+.chip.good { border-color:rgba(61,220,132,.4); color:var(--C); }
+.chip.warn { border-color:rgba(255,209,102,.4); color:var(--ext); }
+.chip.bad  { border-color:rgba(255,107,157,.4); color:var(--imp); }
+.interview-q {
+  background: rgba(255,209,102,0.05);
+  border:1px solid rgba(255,209,102,0.15);
+  border-radius:6px; padding:8px 10px; margin-top:6px;
+}
+.interview-q .qlabel { font-size:.5rem; color:var(--ext); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+.interview-q p { font-size:.6rem; color:#9aa5be; }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>☕ Java Collections — Interactive Hierarchy</h1>
+  <div class="leg">
+    <div class="li"><div class="lb" style="border-color:var(--I);background:rgba(0,198,255,.2)"></div>Interface</div>
+    <div class="li"><div class="lb" style="border-color:var(--A);background:rgba(255,124,64,.2)"></div>Abstract</div>
+    <div class="li"><div class="lb" style="border-color:var(--C);background:rgba(61,220,132,.2)"></div>Concrete</div>
+    <div class="li"><div class="lb" style="border-color:var(--L);background:rgba(185,143,255,.2)"></div>Legacy</div>
+    <div class="li"><div class="lline" style="background:var(--ext)"></div>extends</div>
+    <div class="li"><div class="lline" style="background:var(--imp);background:repeating-linear-gradient(90deg,var(--imp) 0,var(--imp) 5px,transparent 5px,transparent 9px)"></div>implements</div>
+  </div>
+  <div class="ctrl">
+    <button class="btn" onclick="resetView()">⟳ Reset</button>
+    <button class="btn" onclick="doZoom(1.15)">＋</button>
+    <button class="btn" onclick="doZoom(0.87)">－</button>
+  </div>
+</div>
+
+<div id="wrap">
+  <div id="world">
+    <svg id="svg-edges" width="5000" height="3000"></svg>
+  </div>
+</div>
+
+<!-- Info Panel -->
+<div id="info-panel">
+  <button class="info-close" onclick="closePanel()">✕</button>
+  <div id="panel-content"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  NODE DATA  (id, x, y, type, label, pkg, body, info)
+// ══════════════════════════════════════════════════════
+const NODE_W = 200; // approximate – real size from DOM
+
+const nodes = [
+// ── ROOT ──────────────────────────────────────────────
+{id:'Iterable', x:1200, y:30, t:'I',
+ label:'Iterable<E>', pkg:'java.lang',
+ body:'Enables for-each loop on any object.',
+ info:{
+  desc:'Root of the entire Java iteration model. Any class implementing Iterable can be used in a for-each loop.',
+  methods:['iterator() → Iterator<E>'],
+  complexity:[],
+  tips:['Introduced in Java 5 with generics','Enhanced for-loop calls iterator() internally','Collections are Iterable, arrays are NOT (they use index)'],
+  qs:[{q:'Why does Collection extend Iterable?',a:'So all collections support the enhanced for-each loop automatically via iterator().'}]
+ }
+},
+{id:'Collection', x:1200, y:150, t:'I',
+ label:'Collection<E>', pkg:'java.util',
+ body:'Root of the collection hierarchy.',
+ info:{
+  desc:'The fundamental interface for all JCF collections. Represents a group of objects (elements). Does NOT guarantee order or uniqueness.',
+  methods:['add(E)','remove(Object)','contains(Object)','size()','isEmpty()','iterator()','toArray()','stream()'],
+  complexity:[],
+  tips:['Map does NOT extend Collection','Collections class (plural) is a utility, not this interface','Bulk ops: addAll, removeAll, retainAll, clear'],
+  qs:[{q:'Difference between Collection and Collections?',a:'Collection (singular) is the interface. Collections (plural) is a utility class with static helper methods like sort(), shuffle(), unmodifiableList().'}]
+ }
+},
+{id:'AbstractCollection', x:1200, y:270, t:'A',
+ label:'AbstractCollection<E>', pkg:'java.util',
+ body:'Skeletal impl. Only iterator() + size() required.',
+ info:{
+  desc:'Provides a skeletal implementation of Collection. You only need to implement iterator() and size() to get a working, complete Collection.',
+  methods:['Implements all Collection methods using iterator()'],
+  tips:['Template Method pattern in action','toString() also provided here','AbstractList, AbstractSet, AbstractQueue all extend this'],
+  qs:[{q:'Why use AbstractCollection?',a:'It is an application of the Template Method design pattern — it provides default implementations in terms of iterator() and size(), so subclasses only override what differs.'}]
+ }
+},
+
+// ── LIST BRANCH ────────────────────────────────────────
+{id:'List', x:480, y:150, t:'I',
+ label:'List<E>', pkg:'java.util',
+ body:'Ordered, allows duplicates. Index-based access.',
+ info:{
+  desc:'An ordered (sequenced) collection. The user controls where elements are inserted. Allows duplicate elements and multiple null values.',
+  methods:['get(int)','set(int, E)','add(int, E)','remove(int)','indexOf(Object)','subList(int,int)','listIterator()'],
+  tips:['Guarantees positional order (insertion order preserved)','Allows duplicates — key difference from Set','subList returns a view (backed by original list)'],
+  qs:[{q:'List vs Set?',a:'List is ordered and allows duplicates. Set is unordered (except LinkedHashSet/TreeSet) and forbids duplicates.'}]
+ }
+},
+{id:'AbstractList', x:480, y:370, t:'A',
+ label:'AbstractList<E>', pkg:'java.util',
+ body:'Skeletal List impl for random-access stores.',
+ info:{
+  desc:'Provides skeletal implementation of List backed by random-access data stores (like arrays). Subclasses only need to implement get(int) and size().',
+  methods:['Implements iterator(), listIterator(), indexOf(), subList() etc.'],
+  tips:['Use AbstractSequentialList for linked structures instead','Provides fail-fast iterator using modCount field','RandomAccess marker interface often paired with this'],
+  qs:[{q:'What is modCount?',a:'A counter incremented on every structural modification. Iterators snapshot it and throw ConcurrentModificationException if it changes — the fail-fast mechanism.'}]
+ }
+},
+{id:'AbstractSeqList', x:200, y:490, t:'A',
+ label:'AbstractSequentialList<E>', pkg:'java.util',
+ body:'Skeletal List impl for sequential (linked) access.',
+ info:{
+  desc:'Provides a skeletal List for sequential access. get(int) is implemented via listIterator(index). LinkedList extends this.',
+  methods:['Requires only listIterator() and size()'],
+  tips:['Opposite of AbstractList: optimised for sequential not random access','Random access is O(n) — must traverse from head/tail','LinkedList is the only JDK class extending this'],
+  qs:[{q:'Why is LinkedList slow for random access?',a:'get(i) on LinkedList calls listIterator(i) which traverses node by node — O(n). Use ArrayList when you need fast random access.'}]
+ }
+},
+{id:'ArrayList', x:60, y:620, t:'C',
+ label:'ArrayList<E>', pkg:'java.util',
+ body:'Resizable array. O(1) get. Not thread-safe.',
+ info:{
+  desc:'The most commonly used List. Backed by an Object[]. Auto-grows by 50% when capacity is exceeded.',
+  methods:['get(int) — O(1)','add(E) — O(1) amortised','add(int,E) — O(n)','remove(int) — O(n)','contains — O(n)'],
+  complexity:[{label:'get',cls:'good'},{label:'add-end O(1)*',cls:'good'},{label:'add-mid O(n)',cls:'bad'},{label:'search O(n)',cls:'warn'}],
+  tips:['Default capacity = 10; grows to 15, 22, 33…','ensureCapacity() to pre-allocate and avoid copies','trimToSize() to release wasted memory','Implements RandomAccess marker interface'],
+  qs:[
+    {q:'ArrayList vs LinkedList — when to use?',a:'ArrayList: fast get/iteration, rare inserts. LinkedList: frequent add/remove at ends (queue/deque), rare index access.'},
+    {q:'How does ArrayList grow?',a:'When full, it creates a new array at oldCapacity * 1.5 + 1 and copies elements — O(n) occasionally, amortised O(1).'}
+  ]
+ }
+},
+{id:'LinkedList', x:280, y:620, t:'C',
+ label:'LinkedList<E>', pkg:'java.util',
+ body:'Doubly-linked. Implements List + Deque.',
+ info:{
+  desc:'A doubly-linked list implementing both List and Deque. Each element is a Node with prev/next pointers. Can be used as a stack, queue, or deque.',
+  methods:['addFirst/Last — O(1)','removeFirst/Last — O(1)','get(int) — O(n)','contains — O(n)'],
+  complexity:[{label:'addFirst/Last O(1)',cls:'good'},{label:'get(i) O(n)',cls:'bad'},{label:'remove O(1)*',cls:'good'}],
+  tips:['No RandomAccess — avoid get(i) in loops','Each node takes ~48 bytes overhead — high memory use','peek()/poll() return null (not exceptions) — queue style','push()/pop() work like a stack on the head'],
+  qs:[{q:'Why is LinkedList memory-heavy?',a:'Each node stores the element + prev + next references (~48 bytes extra per element vs ~4 bytes in ArrayList). Use only when insert/delete performance matters more.'}]
+ }
+},
+{id:'Vector', x:520, y:490, t:'L',
+ label:'Vector<E>', pkg:'java.util',
+ body:'Legacy synchronized resizable array.',
+ info:{
+  desc:'Like ArrayList but every method is synchronized. Part of the original JDK 1.0 before the Collections Framework. Grows by 100% (doubles) instead of 50%.',
+  methods:['All ArrayList methods','elementAt(int) (legacy alias for get)'],
+  complexity:[],
+  tips:['Synchronised = slower than ArrayList even in single-threaded code','Prefer Collections.synchronizedList(new ArrayList<>()) or CopyOnWriteArrayList','Enumeration (legacy iterator) exposed via elements()','Doubles capacity (wasteful vs ArrayList\'s 1.5x)'],
+  qs:[{q:'Vector vs ArrayList?',a:'Vector is synchronized (thread-safe but slow), ArrayList is not. Both are resizable arrays. Prefer ArrayList + explicit sync or ConcurrentLinkedDeque for modern code.'}]
+ }
+},
+{id:'Stack', x:520, y:620, t:'L',
+ label:'Stack<E>', pkg:'java.util',
+ body:'Legacy LIFO stack. Extends Vector.',
+ info:{
+  desc:'A LIFO stack extending Vector. All Vector synchronization overhead applies. Peek, pop, push, empty, search.',
+  methods:['push(E)','pop() → E','peek() → E','empty() → boolean','search(Object) → int (1-based)'],
+  tips:['search() returns 1-based position from top','Prefer ArrayDeque for stacks — faster and not synchronized','Stack extends Vector which extends AbstractList — odd hierarchy','ArrayDeque.push/pop are LIFO equivalent'],
+  qs:[{q:'Stack vs Deque as a stack?',a:'Deque (ArrayDeque) is recommended by Java docs. It\'s faster (no sync), less memory, and more flexible. Stack has an awkward inheritance from Vector.'}]
+ }
+},
+{id:'CopyOnWriteArrayList', x:760, y:620, t:'C',
+ label:'CopyOnWriteArrayList<E>', pkg:'java.util.concurrent',
+ body:'Thread-safe. Copies array on every write.',
+ info:{
+  desc:'A thread-safe List where every mutating operation (add, set, remove) makes a fresh copy of the underlying array. Readers are never blocked.',
+  methods:['add — O(n) — copies full array','get — O(1)','iterator() — snapshot, never throws CME'],
+  complexity:[{label:'read O(1)',cls:'good'},{label:'write O(n)',cls:'bad'}],
+  tips:['Iterator is a snapshot — won\'t see new elements added after creation','Never throws ConcurrentModificationException','Ideal for listener/observer lists (rare writes, frequent reads)','Writes hold ReentrantLock'],
+  qs:[{q:'When to use CopyOnWriteArrayList?',a:'When reads vastly outnumber writes (e.g., event listener lists). Each write is O(n) so it\'s inefficient for frequent modifications.'}]
+ }
+},
+
+// ── SET BRANCH ─────────────────────────────────────────
+{id:'Set', x:960, y:150, t:'I',
+ label:'Set<E>', pkg:'java.util',
+ body:'No duplicates. Models mathematical set.',
+ info:{
+  desc:'A Collection that forbids duplicate elements. The mathematical set abstraction. No guaranteed order (unless SortedSet/LinkedHashSet).',
+  methods:['Inherits all Collection methods','add(E) returns false if element already present'],
+  tips:['equals() and hashCode() contract critical for Set behaviour','add() returns boolean — useful to detect duplicates','No positional access (no get(int))'],
+  qs:[{q:'How does HashSet prevent duplicates?',a:'It uses HashMap internally. add(e) calls map.put(e, PRESENT). HashMap rejects duplicate keys, so duplicates are naturally prevented.'}]
+ }
+},
+{id:'SortedSet', x:840, y:270, t:'I',
+ label:'SortedSet<E>', pkg:'java.util',
+ body:'Set with elements in ascending order.',
+ info:{
+  desc:'A Set maintaining elements in ascending order (natural or Comparator). Enables range operations.',
+  methods:['first()','last()','headSet(toE)','tailSet(fromE)','subSet(from,to)','comparator()'],
+  tips:['null elements generally not allowed (compare fails)','headSet/tailSet/subSet return views — modifications reflect back','Range views are half-open: [from, to)'],
+  qs:[{q:'SortedSet vs NavigableSet?',a:'NavigableSet extends SortedSet adding navigation methods like floor(), ceiling(), higher(), lower() and descending iterators. TreeSet implements NavigableSet.'}]
+ }
+},
+{id:'NavigableSet', x:840, y:390, t:'I',
+ label:'NavigableSet<E>', pkg:'java.util',
+ body:'SortedSet + floor/ceiling navigation.',
+ info:{
+  desc:'Extends SortedSet with navigation methods to find closest matches. Also supports descending iteration.',
+  methods:['floor(E) — ≤ e','ceiling(E) — ≥ e','lower(E) — < e','higher(E) — > e','pollFirst()','pollLast()','descendingSet()'],
+  tips:['All range operations have inclusive/exclusive overloads','descendingSet() returns a reverse-order view','pollFirst/Last remove and return, null if empty'],
+  qs:[{q:'floor() vs lower()?',a:'floor(e) returns the greatest element ≤ e (inclusive). lower(e) returns the greatest element strictly < e (exclusive).'}]
+ }
+},
+{id:'AbstractSet', x:1060, y:390, t:'A',
+ label:'AbstractSet<E>', pkg:'java.util',
+ body:'Skeletal Set impl. Overrides equals/hashCode.',
+ info:{
+  desc:'Skeletal implementation of Set. Provides equals() and hashCode() based on set contents rather than object identity.',
+  methods:['equals() — compares by containsAll both ways','hashCode() — sum of element hashCodes'],
+  tips:['removeAll() is overridden here for performance','Two sets are equal if they contain the same elements regardless of type (HashSet vs TreeSet can be equal)'],
+  qs:[{q:'Can a HashSet equal a TreeSet?',a:'Yes! AbstractSet.equals() only checks that both sets contain the same elements using containsAll() — it is type-agnostic.'}]
+ }
+},
+{id:'HashSet', x:930, y:510, t:'C',
+ label:'HashSet<E>', pkg:'java.util',
+ body:'Hash-table backed. O(1) ops. No order.',
+ info:{
+  desc:'Backed entirely by a HashMap<E, Object>. The element is the key; a shared PRESENT sentinel is the value. Allows one null.',
+  methods:['add — O(1) avg','remove — O(1) avg','contains — O(1) avg','Iteration O(n + capacity)'],
+  complexity:[{label:'add O(1)*',cls:'good'},{label:'contains O(1)*',cls:'good'},{label:'order: none',cls:'warn'}],
+  tips:['Initial capacity + load factor (default 0.75) affect performance','Over 0.75 load → rehashing (expensive O(n))','Allows exactly ONE null element','Iteration order is unpredictable'],
+  qs:[
+    {q:'How does HashSet use HashMap?',a:'add(e) calls map.put(e, PRESENT). PRESENT is a static final Object. So the set stores elements as HashMap keys.'},
+    {q:'Load factor significance?',a:'At load factor 0.75, when 75% full, the table doubles and rehashes. Lower = less collision, more memory. Higher = more collision, less memory.'}
+  ]
+ }
+},
+{id:'LinkedHashSet', x:930, y:640, t:'C',
+ label:'LinkedHashSet<E>', pkg:'java.util',
+ body:'HashSet + insertion-order iteration.',
+ info:{
+  desc:'A HashSet backed by a LinkedHashMap. Maintains a doubly-linked list through all entries to define insertion-order iteration.',
+  complexity:[{label:'add O(1)*',cls:'good'},{label:'order: insertion',cls:'good'}],
+  tips:['Slightly slower than HashSet due to linked list maintenance','Only JDK Set with guaranteed insertion-order AND O(1) ops','Perfect when you need uniqueness + predictable iteration order'],
+  qs:[{q:'LinkedHashSet vs TreeSet?',a:'LinkedHashSet is O(1) and maintains insertion order. TreeSet is O(log n) and maintains sorted order. Choose based on whether you need natural sorting or insertion order.'}]
+ }
+},
+{id:'TreeSet', x:820, y:640, t:'C',
+ label:'TreeSet<E>', pkg:'java.util',
+ body:'Sorted NavigableSet. Red-black tree. O(log n).',
+ info:{
+  desc:'Backed by a TreeMap. Implements NavigableSet and SortedSet. All elements ordered by natural ordering or Comparator. O(log n) for all ops.',
+  methods:['All NavigableSet navigation methods','floor, ceiling, higher, lower, pollFirst, pollLast'],
+  complexity:[{label:'add O(log n)',cls:'warn'},{label:'contains O(log n)',cls:'warn'},{label:'sorted always',cls:'good'}],
+  tips:['No null elements (compareTo/compare would NPE)','Comparator or Comparable must be consistent with equals','Backed by TreeMap — same red-black tree structure','Range views: headSet, tailSet, subSet are O(1) views'],
+  qs:[{q:'TreeSet implements which interfaces?',a:'TreeSet implements NavigableSet, SortedSet, Set, and Collection (and Iterable). It does NOT implement List or Queue.'}]
+ }
+},
+{id:'EnumSet', x:1100, y:510, t:'A',
+ label:'EnumSet<E>', pkg:'java.util',
+ body:'Blazing-fast bit-vector Set for enum types.',
+ info:{
+  desc:'A specialised Set for use with enum types. Represented internally as a bit vector (long for ≤64 enum values). Extremely compact and fast.',
+  methods:['EnumSet.of(e1,e2,…)','EnumSet.allOf(MyEnum.class)','EnumSet.complementOf(enumSet)','EnumSet.range(from,to)'],
+  complexity:[{label:'all ops O(1)',cls:'good'},{label:'memory: 1 long',cls:'good'}],
+  tips:['Cannot hold null (throws NPE)','Two concrete subclasses: RegularEnumSet (≤64) and JumboEnumSet (>64)','EnumSet.copyOf() is the only way to copy','Iteration in enum declaration order'],
+  qs:[{q:'Why is EnumSet so fast?',a:'Operations are implemented as bit manipulations on a long (or long[]). OR for addAll, AND for retainAll, NOT for complement — all O(1) at the CPU level.'}]
+ }
+},
+{id:'CopyOnWriteArraySet', x:1120, y:640, t:'C',
+ label:'CopyOnWriteArraySet<E>', pkg:'java.util.concurrent',
+ body:'Thread-safe Set backed by CopyOnWriteArrayList.',
+ info:{
+  desc:'A thread-safe Set implemented as a CopyOnWriteArrayList. Contains check uses linear scan (no hash). Best for very small sets with rare writes.',
+  complexity:[{label:'contains O(n)',cls:'bad'},{label:'write O(n)',cls:'bad'},{label:'thread-safe reads',cls:'good'}],
+  tips:['contains() is O(n) — not O(1) like HashSet','Good for small sets of listeners/observers','Iterator snapshot never throws ConcurrentModificationException'],
+  qs:[{q:'CopyOnWriteArraySet vs HashSet?',a:'CopyOnWriteArraySet is thread-safe and never throws CME, but contains() is O(n). HashSet is O(1) but not thread-safe. Use COWAS only for tiny, read-heavy concurrent sets.'}]
+ }
+},
+
+// ── QUEUE BRANCH ───────────────────────────────────────
+{id:'Queue', x:1400, y:270, t:'I',
+ label:'Queue<E>', pkg:'java.util',
+ body:'FIFO. offer/poll/peek. No nulls recommended.',
+ info:{
+  desc:'A collection designed for holding elements prior to processing. Typically FIFO. Two sets of methods: throw exception (add/remove/element) vs return null/false (offer/poll/peek).',
+  methods:['offer(E) → bool','poll() → E|null','peek() → E|null','add(E) — throws','remove() — throws','element() — throws'],
+  tips:['Prefer offer/poll/peek over add/remove/element to avoid exceptions','null not recommended (poll returns null meaning "empty")','Deque extends Queue adding double-ended operations'],
+  qs:[{q:'offer() vs add()?',a:'add() throws IllegalStateException if capacity exceeded. offer() returns false. In unbounded queues both behave the same, but offer() is preferred.'}]
+ }
+},
+{id:'Deque', x:1280, y:390, t:'I',
+ label:'Deque<E>', pkg:'java.util',
+ body:'Double-ended queue. Stack + Queue operations.',
+ info:{
+  desc:'Double-Ended Queue. Can insert/remove at both ends. Can be used as a FIFO queue (offerLast/pollFirst) or LIFO stack (push/pop = offerFirst/pollFirst).',
+  methods:['offerFirst/Last','pollFirst/Last','peekFirst/Last','push(E) = addFirst','pop() = removeFirst','descendingIterator()'],
+  tips:['push/pop simulate a stack at the FRONT of the deque','ArrayDeque is the recommended implementation (over Stack and LinkedList)','Null elements not permitted in most implementations'],
+  qs:[{q:'Why use Deque instead of Stack?',a:'Java docs recommend Deque (specifically ArrayDeque) for stack operations. Stack extends Vector which adds unnecessary synchronization overhead.'}]
+ }
+},
+{id:'BlockingQueue', x:1540, y:390, t:'I',
+ label:'BlockingQueue<E>', pkg:'java.util.concurrent',
+ body:'Blocks on put (full) and take (empty).',
+ info:{
+  desc:'A Queue that supports blocking wait for space when inserting, and for elements when retrieving. Designed for producer-consumer patterns.',
+  methods:['put(E) — blocks if full','take() → E — blocks if empty','offer(E, timeout, unit)','poll(timeout, unit)','remainingCapacity()','drainTo(Collection)'],
+  tips:['Four method groups: throw / return bool / block / timeout','No null elements allowed','drainTo() efficiently moves elements in bulk','Used in thread pools: LinkedBlockingQueue is default in ThreadPoolExecutor'],
+  qs:[{q:'BlockingQueue in ThreadPoolExecutor?',a:'Executors.newFixedThreadPool uses LinkedBlockingQueue (unbounded). Executors.newCachedThreadPool uses SynchronousQueue (zero capacity — handoff only).'}]
+ }
+},
+{id:'BlockingDeque', x:1400, y:510, t:'I',
+ label:'BlockingDeque<E>', pkg:'java.util.concurrent',
+ body:'BlockingQueue + Deque. Blocks at both ends.',
+ info:{
+  desc:'Combines BlockingQueue and Deque. Supports blocking inserts/removes at both the head and the tail.',
+  methods:['putFirst/Last — blocks','takeFirst/Last — blocks','offerFirst/Last(e,t,u)','pollFirst/Last(t,u)'],
+  tips:['Only implementation in JDK is LinkedBlockingDeque','Used in work-stealing algorithms — threads steal from other queues\' tails'],
+  qs:[{q:'Use case for BlockingDeque?',a:'Work-stealing thread pools (like ForkJoinPool). Workers process tasks from their own deque head; idle workers steal from other deques\' tails.'}]
+ }
+},
+{id:'TransferQueue', x:1660, y:510, t:'I',
+ label:'TransferQueue<E>', pkg:'java.util.concurrent',
+ body:'BlockingQueue where producer waits for consumer.',
+ info:{
+  desc:'A BlockingQueue where producers can wait until a consumer is ready to receive. transfer() blocks until a consumer takes the element.',
+  methods:['transfer(E) — blocks until consumed','tryTransfer(E) — immediate','tryTransfer(E,t,u) — with timeout','getWaitingConsumerCount()','hasWaitingConsumer()'],
+  tips:['LinkedTransferQueue is the only JDK implementation','Stronger guarantee than BlockingQueue — producer waits for CONSUMER, not just queue space'],
+  qs:[{q:'transfer() vs put()?',a:'put() blocks until there\'s space in the queue. transfer() blocks until a consumer actually takes the element — guarantees synchronous handoff.'}]
+ }
+},
+{id:'AbstractQueue', x:1540, y:510, t:'A',
+ label:'AbstractQueue<E>', pkg:'java.util',
+ body:'Skeletal Queue. Builds add/remove/element on offer/poll/peek.',
+ info:{
+  desc:'Provides skeletal implementations: add() calls offer() and throws on false; remove() calls poll() and throws on null; element() calls peek() and throws on null.',
+  tips:['Template method pattern — implements exception-throwing methods using the null-returning ones','PriorityQueue extends AbstractQueue'],
+  qs:[{q:'What does AbstractQueue provide?',a:'It provides add(), remove(), and element() implemented in terms of offer(), poll(), and peek() respectively — throwing exceptions on failure instead of returning null.'}]
+ }
+},
+{id:'ArrayDeque', x:1160, y:510, t:'C',
+ label:'ArrayDeque<E>', pkg:'java.util',
+ body:'Resizable-array Deque. Faster than Stack/LinkedList.',
+ info:{
+  desc:'A resizable-array Deque. No capacity restrictions. Faster than Stack (no sync) and LinkedList (better cache locality). The recommended stack/queue implementation.',
+  methods:['push/pop — LIFO stack at head','offer/poll — FIFO queue','peekFirst/Last, pollFirst/Last'],
+  complexity:[{label:'add/remove ends O(1)*',cls:'good'},{label:'no null allowed',cls:'warn'}],
+  tips:['Initial capacity 16, doubles when full','Null not permitted — used as empty-check sentinel internally','Circular buffer implementation — very cache-friendly','Not thread-safe — use LinkedBlockingDeque for concurrent access'],
+  qs:[{q:'ArrayDeque vs LinkedList as a Queue?',a:'ArrayDeque is faster: no node allocation overhead, better cache locality. LinkedList allocates a Node object per element. ArrayDeque is preferred for both stack and queue use cases.'}]
+ }
+},
+{id:'PriorityQueue', x:1540, y:640, t:'C',
+ label:'PriorityQueue<E>', pkg:'java.util',
+ body:'Min-heap. Natural order or Comparator. O(log n).',
+ info:{
+  desc:'An unbounded priority queue backed by a min-heap (binary heap stored in an array). The head is always the LEAST element. Not FIFO — smallest priority is dequeued first.',
+  methods:['offer/add — O(log n)','poll — O(log n)','peek — O(1)','contains — O(n)','remove(Object) — O(n)'],
+  complexity:[{label:'peek O(1)',cls:'good'},{label:'offer/poll O(log n)',cls:'warn'},{label:'contains O(n)',cls:'bad'}],
+  tips:['NOT thread-safe — use PriorityBlockingQueue','Iterator does NOT traverse in priority order','To get sorted output, drain via repeated poll()','Null elements not permitted'],
+  qs:[{q:'PriorityQueue min vs max heap?',a:'Default is min-heap (natural order). For max-heap: new PriorityQueue<>(Collections.reverseOrder()) or Comparator.reverseOrder().'}]
+ }
+},
+{id:'LinkedBlockingQueue', x:1380, y:640, t:'C',
+ label:'LinkedBlockingQueue<E>', pkg:'java.util.concurrent',
+ body:'Optionally bounded blocking queue (linked nodes).',
+ info:{
+  desc:'A blocking FIFO queue backed by linked nodes. Optionally bounded (default Integer.MAX_VALUE). Uses two separate locks for head (take) and tail (put) — higher throughput than ArrayBlockingQueue.',
+  complexity:[{label:'put/take O(1)',cls:'good'},{label:'two-lock design',cls:'good'}],
+  tips:['Default capacity = Integer.MAX_VALUE (effectively unbounded)','Two-lock algorithm: one ReentrantLock each for put and take','Higher throughput than ArrayBlockingQueue under contention','Default queue in Executors.newFixedThreadPool'],
+  qs:[{q:'LinkedBlockingQueue vs ArrayBlockingQueue?',a:'LinkedBlockingQueue uses 2 locks (put + take can proceed simultaneously). ArrayBlockingQueue uses 1 lock. LBQ has higher throughput but higher memory overhead per element.'}]
+ }
+},
+{id:'ArrayBlockingQueue', x:1540, y:760, t:'C',
+ label:'ArrayBlockingQueue<E>', pkg:'java.util.concurrent',
+ body:'Bounded blocking queue. Array-backed. Single lock.',
+ info:{
+  desc:'A bounded, FIFO, array-backed blocking queue. Fixed capacity set at construction. Uses a single ReentrantLock for both put and take.',
+  complexity:[{label:'put/take O(1)',cls:'good'},{label:'bounded',cls:'warn'}],
+  tips:['Capacity is FIXED — choose wisely at construction','Supports optional fairness (FIFO ordering of waiting threads)','Single lock — lower throughput under high contention vs LinkedBlockingQueue','Memory pre-allocated — more predictable GC than LinkedBlockingQueue'],
+  qs:[{q:'When to prefer ArrayBlockingQueue?',a:'When you need bounded capacity (backpressure) and predictable memory. Its single-lock design has lower overhead per op but less concurrency than LinkedBlockingQueue.'}]
+ }
+},
+{id:'PriorityBlockingQueue', x:1280, y:760, t:'C',
+ label:'PriorityBlockingQueue<E>', pkg:'java.util.concurrent',
+ body:'Unbounded blocking priority queue.',
+ info:{
+  desc:'An unbounded BlockingQueue backed by a min-heap. take() blocks when empty (never blocks on put since unbounded). Thread-safe PriorityQueue.',
+  tips:['put() never blocks (unbounded)','take() blocks until an element is available','Null not permitted; elements must be Comparable or provide Comparator','Out-of-memory possible since unbounded'],
+  qs:[{q:'PriorityBlockingQueue vs PriorityQueue?',a:'PriorityBlockingQueue is thread-safe and its take() blocks when empty. PriorityQueue is not thread-safe. Both use min-heap internally.'}]
+ }
+},
+{id:'DelayQueue', x:1380, y:760, t:'C',
+ label:'DelayQueue<E>', pkg:'java.util.concurrent',
+ body:'Blocking queue of Delayed elements.',
+ info:{
+  desc:'An unbounded BlockingQueue of Delayed elements. An element can only be taken when its delay has expired. The head is the element with the MOST expired delay.',
+  methods:['Elements must implement Delayed','getDelay(TimeUnit) defines wait time'],
+  tips:['Used for scheduling: task cache expiration, retry with backoff','ScheduledThreadPoolExecutor uses a variant of this','peek() can return an element whose delay has not expired','null not permitted'],
+  qs:[{q:'DelayQueue use case?',a:'Scheduling tasks that should execute after a delay — e.g., retrying failed requests with exponential backoff, expiring cache entries, or implementing a session timeout tracker.'}]
+ }
+},
+{id:'SynchronousQueue', x:1660, y:640, t:'C',
+ label:'SynchronousQueue<E>', pkg:'java.util.concurrent',
+ body:'Zero-capacity. Each put waits for a take.',
+ info:{
+  desc:'A queue with zero capacity. Each insert waits for a corresponding remove and vice versa. A pure rendezvous/handoff channel between threads.',
+  methods:['put(E) — blocks until taken','take() — blocks until offered','peek() always returns null','size() always 0'],
+  complexity:[{label:'always size 0',cls:'warn'},{label:'handoff channel',cls:'good'}],
+  tips:['Used in Executors.newCachedThreadPool — tasks hand directly to threads','Supports fair and unfair modes (fair uses FIFO, unfair uses LIFO)','No iteration — it\'s empty by definition'],
+  qs:[{q:'SynchronousQueue use case?',a:'Executors.newCachedThreadPool uses SynchronousQueue. Task producers hand directly to waiting consumer threads. If no thread is available, a new one is created — zero buffering.'}]
+ }
+},
+{id:'LinkedTransferQueue', x:1660, y:760, t:'C',
+ label:'LinkedTransferQueue<E>', pkg:'java.util.concurrent',
+ body:'Unbounded TransferQueue. Preferred over SynchronousQueue.',
+ info:{
+  desc:'An unbounded TransferQueue backed by linked nodes. Combines features of LinkedBlockingQueue and SynchronousQueue. More efficient than either for most use cases.',
+  tips:['transfer() can be used for synchronous handoff like SynchronousQueue','Can also buffer elements like LinkedBlockingQueue','CAS-based algorithm — extremely low contention','Generally preferred over SynchronousQueue in Java 7+'],
+  qs:[{q:'LinkedTransferQueue vs SynchronousQueue?',a:'LTQ can buffer elements AND do synchronous transfer. SynchronousQueue only does synchronous handoff. LTQ is more flexible and generally faster.'}]
+ }
+},
+{id:'LinkedBlockingDeque', x:1160, y:640, t:'C',
+ label:'LinkedBlockingDeque<E>', pkg:'java.util.concurrent',
+ body:'Optionally bounded BlockingDeque (linked).',
+ info:{
+  desc:'A blocking deque backed by linked nodes. Optionally bounded. Supports blocking at both ends. Used in work-stealing thread pools.',
+  tips:['Single ReentrantLock (unlike LinkedBlockingQueue\'s two locks)','Used in ForkJoinPool\'s work-stealing mechanism','Supports all BlockingQueue and Deque methods'],
+  qs:[{q:'Use case for LinkedBlockingDeque?',a:'Work-stealing schedulers. Each worker thread has a deque; it takes tasks from its own head. Idle threads steal from other deques\' tails to maximise CPU utilisation.'}]
+ }
+},
+{id:'ConcurrentLinkedQueue', x:1820, y:390, t:'C',
+ label:'ConcurrentLinkedQueue<E>', pkg:'java.util.concurrent',
+ body:'Non-blocking FIFO queue. CAS-based.',
+ info:{
+  desc:'An unbounded, thread-safe FIFO queue based on linked nodes using CAS (Compare-And-Swap). No blocking — always returns immediately.',
+  complexity:[{label:'offer/poll O(1)',cls:'good'},{label:'size() O(n)!',cls:'bad'},{label:'non-blocking',cls:'good'}],
+  tips:['size() traverses the whole list — avoid it, use isEmpty() instead','Does not implement BlockingQueue — no put/take','Weakly consistent iterator (may or may not reflect concurrent changes)','Ideal for multi-producer, multi-consumer queues needing low latency'],
+  qs:[{q:'ConcurrentLinkedQueue vs LinkedBlockingQueue?',a:'CLQ is non-blocking (CAS-based, never waits). LBQ is blocking (lock-based, waits for elements/space). CLQ: lower latency. LBQ: backpressure and blocking consumer support.'}]
+ }
+},
+{id:'ConcurrentLinkedDeque', x:1820, y:510, t:'C',
+ label:'ConcurrentLinkedDeque<E>', pkg:'java.util.concurrent',
+ body:'Non-blocking deque. CAS-based.',
+ info:{
+  desc:'An unbounded, thread-safe deque using CAS. The concurrent counterpart of ArrayDeque for multi-threaded access without blocking.',
+  tips:['Like ConcurrentLinkedQueue but for both ends','size() is O(n) — use isEmpty()','Weakly consistent iterators'],
+  qs:[{q:'When to use ConcurrentLinkedDeque?',a:'When multiple threads need concurrent access to both ends of a deque without the blocking semantics. Ideal for work-stealing implementations.'}]
+ }
+},
+
+// ── MAP HIERARCHY ──────────────────────────────────────
+{id:'Map', x:2400, y:30, t:'I',
+ label:'Map<K,V>', pkg:'java.util',
+ body:'Key→value pairs. No duplicate keys. Not a Collection.',
+ info:{
+  desc:'An object mapping unique keys to values. NOT a subtype of Collection. Provides three views: keySet(), values(), entrySet().',
+  methods:['put(K,V)','get(Object) → V','remove(Object)','containsKey/Value','keySet()','values()','entrySet()','getOrDefault','putIfAbsent','forEach','compute','merge'],
+  tips:['Map was NOT part of Collection to avoid forced compatibility','entrySet() iteration is more efficient than keySet() + get()','Java 8+ default methods: computeIfAbsent, merge, replaceAll are very useful'],
+  qs:[{q:'Why doesn\'t Map extend Collection?',a:'A Map.put(key, value) doesn\'t fit Collection.add(e) — maps have two type params. Forcing Map into Collection would require awkward compromises. The designers chose a separate hierarchy.'}]
+ }
+},
+{id:'SortedMap', x:2160, y:150, t:'I',
+ label:'SortedMap<K,V>', pkg:'java.util',
+ body:'Map with keys in ascending order.',
+ info:{
+  desc:'A Map with total ordering on its keys. Range view operations, access to first/last key.',
+  methods:['firstKey()','lastKey()','headMap(toKey)','tailMap(fromKey)','subMap(from,to)','comparator()'],
+  tips:['Range views headMap/tailMap/subMap are half-open [from,to)','All keys must implement Comparable or provide Comparator','null keys not generally supported'],
+  qs:[{q:'SortedMap vs NavigableMap?',a:'SortedMap provides basic ordering and range views. NavigableMap adds floor/ceiling/higher/lower key lookups and descending map views.'}]
+ }
+},
+{id:'NavigableMap', x:2160, y:270, t:'I',
+ label:'NavigableMap<K,V>', pkg:'java.util',
+ body:'SortedMap + floorKey/ceilingKey navigation.',
+ info:{
+  desc:'Extends SortedMap with navigation methods to find the closest key match. Supports descending order and fully closed/open range views.',
+  methods:['floorKey/Entry','ceilingKey/Entry','lowerKey/Entry','higherKey/Entry','pollFirstEntry','pollLastEntry','descendingMap()','descendingKeySet()'],
+  tips:['subMap(from, incl, to, incl) allows inclusive/exclusive control','descendingMap() is a view — mutations reflect back','NavigableMap and NavigableSet share design symmetry'],
+  qs:[{q:'floorKey() vs lowerKey()?',a:'floorKey(k) returns the greatest key ≤ k (inclusive). lowerKey(k) returns the greatest key strictly < k (exclusive).'}]
+ }
+},
+{id:'ConcurrentMap', x:2400, y:150, t:'I',
+ label:'ConcurrentMap<K,V>', pkg:'java.util.concurrent',
+ body:'Thread-safe Map with atomic compound ops.',
+ info:{
+  desc:'A Map with atomic compound operations to avoid check-then-act race conditions in concurrent code.',
+  methods:['putIfAbsent(K,V)','remove(K,V) — conditional','replace(K,V)','replace(K,oldV,newV) — conditional'],
+  tips:['All operations are atomic — no external synchronization needed','Java 8 added compute, merge, forEach as ConcurrentMap default methods','ConcurrentHashMap never returns null — use containsKey() to distinguish'],
+  qs:[{q:'Why putIfAbsent instead of containsKey + put?',a:'containsKey() then put() is a TOCTOU race condition. Another thread can insert between those two calls. putIfAbsent() is atomic — it checks and inserts in one indivisible operation.'}]
+ }
+},
+{id:'ConcurrentNavigableMap', x:2400, y:270, t:'I',
+ label:'ConcurrentNavigableMap<K,V>', pkg:'java.util.concurrent',
+ body:'ConcurrentMap + NavigableMap.',
+ info:{
+  desc:'Combines ConcurrentMap and NavigableMap. Thread-safe sorted map with navigation methods. Implemented only by ConcurrentSkipListMap.',
+  tips:['Allows concurrent sorted map operations like floorKey, ceilingKey','SubMap views are also concurrent and thread-safe'],
+  qs:[{q:'Only implementation?',a:'ConcurrentSkipListMap is the only JDK implementation of ConcurrentNavigableMap.'}]
+ }
+},
+{id:'AbstractMap', x:2660, y:150, t:'A',
+ label:'AbstractMap<K,V>', pkg:'java.util',
+ body:'Skeletal Map. Only entrySet() required.',
+ info:{
+  desc:'Skeletal implementation of Map. You only need to implement entrySet() to get a read-only Map. For modifiable maps, also implement put().',
+  methods:['Implements get, containsKey, containsValue, keySet, values via entrySet()'],
+  tips:['toString() implemented here','equals() and hashCode() based on entrySet content','keySet() and values() return views backed by entrySet()'],
+  qs:[{q:'AbstractMap in the Template Method pattern?',a:'Yes — get() traverses entrySet() looking for key equality. Concrete classes override entrySet() with an efficient data structure; all other Map methods then work for free.'}]
+ }
+},
+{id:'HashMap', x:2560, y:270, t:'C',
+ label:'HashMap<K,V>', pkg:'java.util',
+ body:'Hash-table. O(1) avg. Allows null key. No order.',
+ info:{
+  desc:'The most widely used Map. Hash table + linked list/tree per bucket. Allows one null key and multiple null values. No ordering guarantee.',
+  methods:['put/get/remove — O(1) avg','containsKey — O(1) avg','containsValue — O(n)'],
+  complexity:[{label:'get O(1)*',cls:'good'},{label:'put O(1)*',cls:'good'},{label:'containsValue O(n)',cls:'bad'}],
+  tips:['Buckets → linked list; when ≥8 entries → red-black tree (Java 8+, TREEIFY_THRESHOLD)','Default capacity 16, load factor 0.75','Null key is stored at index 0','Not thread-safe — use ConcurrentHashMap or Collections.synchronizedMap'],
+  qs:[
+    {q:'HashMap internals (Java 8+)?',a:'Array of Node<K,V>[]. Each bucket is a linked list. When a bucket has ≥8 nodes AND total size ≥64, the list converts to a TreeNode (red-black tree) for O(log n) worst case instead of O(n).'},
+    {q:'hashCode() vs equals() in HashMap?',a:'hashCode() determines the bucket. equals() resolves collisions within the bucket. Both must be consistent: if a.equals(b) then a.hashCode()==b.hashCode().'}
+  ]
+ }
+},
+{id:'LinkedHashMap', x:2560, y:400, t:'C',
+ label:'LinkedHashMap<K,V>', pkg:'java.util',
+ body:'HashMap + doubly-linked list for order.',
+ info:{
+  desc:'A HashMap with a doubly-linked list running through all entries. Provides predictable insertion-order (default) or access-order iteration.',
+  complexity:[{label:'get/put O(1)*',cls:'good'},{label:'insertion/access order',cls:'good'}],
+  tips:['Access-order mode: new LinkedHashMap<>(16, 0.75f, true)','Override removeEldestEntry() to build LRU cache in ~3 lines','Slightly slower than HashMap due to linked list maintenance','Default iteration order: insertion order'],
+  qs:[{q:'How to build an LRU cache using LinkedHashMap?',a:'Use access-order mode (3rd constructor arg = true) and override removeEldestEntry() to return true when size() > maxSize. Java handles eviction automatically.'}]
+ }
+},
+{id:'WeakHashMap', x:2760, y:270, t:'C',
+ label:'WeakHashMap<K,V>', pkg:'java.util',
+ body:'Weak-reference keys. GC can remove entries.',
+ info:{
+  desc:'A Map using weak references for keys. When a key is no longer strongly reachable (no other reference), GC can collect it, and the entry is automatically removed.',
+  complexity:[{label:'get/put O(1)*',cls:'good'},{label:'entries removed by GC',cls:'warn'}],
+  tips:['Uses ReferenceQueue to detect collected keys and remove stale entries','null key supported (special case — not a weak reference)','Do NOT use with String literals or cached Integer values (they are never GCed)','Good for caches, canonicalization tables'],
+  qs:[{q:'When to use WeakHashMap?',a:'When the map should not prevent GC of its keys — e.g., attaching metadata to objects without preventing their collection. Classic use: per-object caches and ClassLoader caches.'}]
+ }
+},
+{id:'IdentityHashMap', x:2760, y:400, t:'C',
+ label:'IdentityHashMap<K,V>', pkg:'java.util',
+ body:'Uses == (identity) not equals() for keys.',
+ info:{
+  desc:'A Map where key equality is checked using == (reference equality) instead of equals(). Uses System.identityHashCode() instead of hashCode().',
+  tips:['Two different String objects with same content are DIFFERENT keys here','Useful for graph traversal algorithms tracking visited nodes','Used internally by Java serialization','Not a general-purpose Map — breaks Map contract (which requires equals())'],
+  qs:[{q:'IdentityHashMap use case?',a:'Tracking object graph structure (e.g., deep copy, serialization). You need to know if two references point to the SAME object in memory, not just equal objects.'}]
+ }
+},
+{id:'EnumMap', x:2760, y:530, t:'C',
+ label:'EnumMap<K,V>', pkg:'java.util',
+ body:'Enum keys only. Backed by array. O(1).',
+ info:{
+  desc:'A specialised Map for enum keys. Backed by an array indexed by enum ordinal. Extremely fast and compact. Maintains enum declaration order.',
+  complexity:[{label:'all ops O(1)',cls:'good'},{label:'very compact',cls:'good'}],
+  tips:['Keys must all be from the same enum type','Null keys not permitted (null values allowed)','Iteration in enum ordinal order','Memory: just Object[] of size enum.values().length'],
+  qs:[{q:'Why is EnumMap faster than HashMap for enum keys?',a:'No hashing needed — the enum ordinal is the array index directly. Array access is O(1) with no collision handling. Also avoids boxing/unboxing overhead.'}]
+ }
+},
+{id:'TreeMap', x:2160, y:400, t:'C',
+ label:'TreeMap<K,V>', pkg:'java.util',
+ body:'Red-black tree. Implements SortedMap+NavigableMap.',
+ info:{
+  desc:'A NavigableMap backed by a red-black tree. Keys are always sorted by natural order or Comparator. Implements both SortedMap and NavigableMap.',
+  methods:['All NavigableMap methods','floorKey/Entry, ceilingKey/Entry, lowerKey, higherKey','pollFirstEntry, pollLastEntry','descendingMap(), headMap, tailMap, subMap'],
+  complexity:[{label:'get/put O(log n)',cls:'warn'},{label:'always sorted',cls:'good'},{label:'range ops O(1)*',cls:'good'}],
+  tips:['null keys not allowed (compareTo NPE)','Comparator must be consistent with equals() for predictable behaviour','Range views (headMap, subMap) are O(1) views — very efficient','Red-black tree guarantees O(log n) worst-case (unlike AVL, which is stricter balance)'],
+  qs:[
+    {q:'TreeMap implements which interfaces?',a:'TreeMap implements NavigableMap, SortedMap, Map (and Cloneable, Serializable). It does NOT implement List, Set, or Queue.'},
+    {q:'TreeMap vs HashMap?',a:'TreeMap: O(log n) all ops, keys always sorted. HashMap: O(1) avg ops, no order. Use TreeMap when you need sorted keys or range queries.'}
+  ]
+ }
+},
+{id:'ConcurrentHashMap', x:2400, y:400, t:'C',
+ label:'ConcurrentHashMap<K,V>', pkg:'java.util.concurrent',
+ body:'Segment-free CAS HashMap. High concurrency.',
+ info:{
+  desc:'A thread-safe, high-performance HashMap. Java 8+ uses CAS and synchronized blocks on individual buckets (no global lock). Null keys/values NOT permitted.',
+  methods:['All ConcurrentMap atomic methods','compute, computeIfAbsent, merge — atomic','mappingCount() (prefer over size() for large maps)'],
+  complexity:[{label:'get/put O(1)*',cls:'good'},{label:'no null K or V',cls:'warn'},{label:'bulk ops parallel',cls:'good'}],
+  tips:['Java 7: 16 segments (Segment extends ReentrantLock). Java 8: per-bucket sync','get() is lock-free in most cases','Null not allowed: null means "not found" in return values','Java 8 added parallel bulk ops: forEach, reduce, search'],
+  qs:[
+    {q:'ConcurrentHashMap vs Hashtable?',a:'Hashtable synchronizes every method with a global lock (slow). CHM uses fine-grained locking/CAS per bucket — far higher throughput. CHM also has atomic compound operations.'},
+    {q:'Why no null in ConcurrentHashMap?',a:'get() returning null is ambiguous: does the key map to null, or is the key absent? In single-threaded HashMap this is resolved by containsKey(), but in concurrent code that check-then-act is a race condition.'}
+  ]
+ }
+},
+{id:'ConcurrentSkipListMap', x:2400, y:530, t:'C',
+ label:'ConcurrentSkipListMap<K,V>', pkg:'java.util.concurrent',
+ body:'Thread-safe NavigableMap via skip list.',
+ info:{
+  desc:'A thread-safe, sorted NavigableMap backed by a skip list. Provides O(log n) operations. No global lock — CAS based. Alternative to TreeMap in concurrent code.',
+  complexity:[{label:'get/put O(log n)',cls:'warn'},{label:'lock-free CAS',cls:'good'},{label:'sorted always',cls:'good'}],
+  tips:['Skip list: multiple levels of linked lists for probabilistic O(log n)','null keys/values not permitted','size() is O(n) — avoid it','descendingMap() returns a reverse-order view'],
+  qs:[{q:'ConcurrentSkipListMap vs TreeMap?',a:'CSM is thread-safe and lock-free (CAS), TreeMap is not thread-safe. CSM: O(log n) concurrent. TreeMap: O(log n) single-threaded. Use CSM in concurrent contexts needing sorted access.'}]
+ }
+},
+{id:'Hashtable', x:2660, y:400, t:'L',
+ label:'Hashtable<K,V>', pkg:'java.util',
+ body:'Legacy synchronized Map. No null K or V.',
+ info:{
+  desc:'Legacy thread-safe hash table from JDK 1.0. Every method is synchronized on the instance. No null keys or values. Prefer ConcurrentHashMap.',
+  tips:['Uses Enumeration (legacy) via keys() and elements()','Capacity grows by 2x + 1 (odd numbers for better distribution)','Synchronization is coarse-grained — one thread at a time globally','Properties extends Hashtable — the only reason it still matters'],
+  qs:[{q:'When is Hashtable still relevant?',a:'Almost never for new code. It is relevant only because Properties extends it. For thread-safe maps, use ConcurrentHashMap (fine-grained locking) or Collections.synchronizedMap().'}]
+ }
+},
+{id:'Properties', x:2660, y:530, t:'L',
+ label:'Properties', pkg:'java.util',
+ body:'Extends Hashtable. String key-value config pairs.',
+ info:{
+  desc:'A Hashtable<Object,Object> subclass for string key-value pairs. Used to load configuration from .properties files or system properties.',
+  methods:['load(InputStream/Reader)','store(OutputStream, comment)','getProperty(key)','setProperty(key,value)','System.getProperties()','propertyNames()'],
+  tips:['getProperty() only works for String keys — use it not get()','Can load XML properties via loadFromXML()','System.getProperty("user.home") uses this internally','Inherits all Hashtable methods — generic use is discouraged'],
+  qs:[{q:'Properties extends Hashtable — is that good design?',a:'No, it is a well-known violation of Liskov Substitution Principle. Properties should have composed a Hashtable, not extended it. You can put non-String keys via inherited put() but getProperty() ignores them.'}]
+ }
+},
+
+// ── UTILITY ────────────────────────────────────────────
+{id:'Iterator', x:400, y:1020, t:'I',
+ label:'Iterator<E>', pkg:'java.util',
+ body:'hasNext() / next() / remove(). Fail-fast.',
+ info:{
+  desc:'The basic iteration interface. Obtained from Iterable.iterator(). Fail-fast iterators throw ConcurrentModificationException if the collection is structurally modified during iteration.',
+  methods:['hasNext() → boolean','next() → E','remove() — removes last element returned','forEachRemaining(Consumer) — Java 8'],
+  tips:['remove() is optional — UnsupportedOperationException if not supported','forEachRemaining is faster than hasNext/next loop','Fail-fast via modCount — not guaranteed, best effort only'],
+  qs:[{q:'Fail-fast vs fail-safe iterators?',a:'Fail-fast (ArrayList, HashSet) throw CME on structural modification. Fail-safe (CopyOnWriteArrayList, ConcurrentHashMap) iterate over a snapshot/weakly consistent view and never throw CME.'}]
+ }
+},
+{id:'ListIterator', x:620, y:1020, t:'I',
+ label:'ListIterator<E>', pkg:'java.util',
+ body:'Bidirectional iterator for Lists.',
+ info:{
+  desc:'Extends Iterator with backward traversal and modification support. Obtained from List.listIterator().',
+  methods:['hasPrevious()','previous() → E','nextIndex()','previousIndex()','add(E)','set(E)'],
+  tips:['Can iterate backwards — start with listIterator(list.size())','add() inserts before the next element that would be returned','set() replaces the last element returned by next/previous'],
+  qs:[{q:'Can you modify a list while iterating?',a:'Yes, via ListIterator.add() and remove(). This is safe because the iterator tracks its own cursor and updates the list. Direct structural modification (list.add/remove) during iteration throws CME.'}]
+ }
+},
+{id:'Comparable', x:860, y:1020, t:'I',
+ label:'Comparable<T>', pkg:'java.lang',
+ body:'Natural ordering via compareTo(T o).',
+ info:{
+  desc:'Imposes a natural ordering on objects. Implemented by String, Integer, Date, etc. Used by TreeSet, TreeMap, PriorityQueue for default sorting.',
+  methods:['compareTo(T o) → int (negative, 0, positive)'],
+  tips:['Contract: sgn(x.compareTo(y)) == -sgn(y.compareTo(x))','Strongly recommended: consistent with equals — x.compareTo(y)==0 implies x.equals(y)','Violating equals consistency causes weird TreeSet/TreeMap behaviour'],
+  qs:[{q:'Comparable vs Comparator?',a:'Comparable defines the NATURAL ordering inside the class (one ordering). Comparator defines an EXTERNAL ordering (multiple orderings possible). Use Comparator when you need multiple sort orders or can\'t modify the class.'}]
+ }
+},
+{id:'Comparator', x:1080, y:1020, t:'I',
+ label:'Comparator<T>', pkg:'java.util',
+ body:'External ordering. @FunctionalInterface.',
+ info:{
+  desc:'A comparison function imposing a total ordering. Functional interface — can be a lambda. Passed to TreeSet, TreeMap, Collections.sort, List.sort.',
+  methods:['compare(T o1, T o2) → int','reversed()','thenComparing()','Comparator.comparing(keyExtractor)'],
+  tips:['Comparator.naturalOrder() / reverseOrder() are convenient statics','thenComparing() for multi-level sort','Comparator.comparing(Person::getName).thenComparing(Person::getAge)','Lambda: (a,b) -> a.length() - b.length() (careful: integer overflow)'],
+  qs:[{q:'compareTo returning subtraction — is it safe?',a:'No! a.compareTo(b) using (a-b) can overflow for large integers. Use Integer.compare(a,b) or compareTo() on the boxed type instead.'}]
+ }
+},
+{id:'MapEntry', x:1300, y:1020, t:'I',
+ label:'Map.Entry<K,V>', pkg:'java.util',
+ body:'Key-value pair view. Via map.entrySet().',
+ info:{
+  desc:'A nested interface inside Map. Represents a key-value pair. Obtained via map.entrySet() iteration. The most efficient way to iterate a Map.',
+  methods:['getKey()','getValue()','setValue(V)','Map.Entry.comparingByKey()','Map.Entry.comparingByValue()'],
+  tips:['entrySet() iteration avoids double lookup (vs keySet() + get())','setValue() writes through to the backing map','comparingByKey/Value useful for sorting entries in streams'],
+  qs:[{q:'Most efficient way to iterate a Map?',a:'Use entrySet().forEach() or for(Map.Entry<K,V> e : map.entrySet()). Iterating keySet() then calling get(key) causes double lookup — inefficient for large maps.'}]
+ }
+},
+{id:'Collections', x:1520, y:1020, t:'C',
+ label:'Collections', pkg:'java.util',
+ body:'Static utility methods for Collection types.',
+ info:{
+  desc:'A utility class (all static methods) providing algorithms and wrappers for Collection types.',
+  methods:['sort(List)','binarySearch(List,key)','shuffle(List)','reverse(List)','min/max(Collection)','frequency(Collection,obj)','disjoint','unmodifiableXxx wrapping','synchronizedXxx wrapping','singletonXxx / emptyXxx / nCopies'],
+  tips:['Collections.sort uses TimSort — stable, O(n log n)','binarySearch requires sorted list — undefined otherwise','unmodifiableList returns a view — the original can still be modified','synchronizedCollection is coarse-grained — prefer concurrent collections'],
+  qs:[{q:'Collections.unmodifiableList vs List.of()?',a:'List.of() (Java 9+) creates a truly immutable list (no nulls). Collections.unmodifiableList wraps an existing list — the original is still mutable, and null elements are allowed.'}]
+ }
+},
+{id:'Arrays', x:1740, y:1020, t:'C',
+ label:'Arrays', pkg:'java.util',
+ body:'Static utility methods for arrays.',
+ info:{
+  desc:'A utility class for arrays: sorting, searching, copying, filling, converting.',
+  methods:['sort(T[]) — dual-pivot quicksort for primitives, TimSort for objects','binarySearch(T[],key)','copyOf / copyOfRange','fill(T[],val)','asList(T…) — fixed-size List view','stream(T[])','deepToString / deepEquals for nested arrays'],
+  tips:['Arrays.asList returns a FIXED-SIZE list — add/remove throw UnsupportedOperationException but set() works','Arrays.sort(Object[]) uses TimSort (stable)','Arrays.sort(int[]) uses dual-pivot quicksort (not stable, but primitives don\'t need stability)','Arrays.parallelSort for large arrays uses ForkJoin'],
+  qs:[{q:'Arrays.asList vs List.of()?',a:'Arrays.asList: fixed-size (no add/remove), allows null, set() works. List.of() (Java 9+): fully immutable, no null, faster. Prefer List.of() when you don\'t need to modify the list.'}]
+ }
+},
+];
+
+// ─── EDGES ───────────────────────────────────────────────
+// r: 'E'=extends(solid yellow), 'I'=implements(dashed pink)
+const edges = [
+  {f:'Collection',t:'Iterable',r:'E'},
+  {f:'AbstractCollection',t:'Collection',r:'I'},
+  // List
+  {f:'List',t:'Collection',r:'E'},
+  {f:'AbstractList',t:'AbstractCollection',r:'E'},{f:'AbstractList',t:'List',r:'I'},
+  {f:'AbstractSeqList',t:'AbstractList',r:'E'},
+  {f:'ArrayList',t:'AbstractList',r:'E'},{f:'ArrayList',t:'List',r:'I'},
+  {f:'LinkedList',t:'AbstractSeqList',r:'E'},{f:'LinkedList',t:'List',r:'I'},{f:'LinkedList',t:'Deque',r:'I'},
+  {f:'Vector',t:'AbstractList',r:'E'},{f:'Vector',t:'List',r:'I'},
+  {f:'Stack',t:'Vector',r:'E'},
+  {f:'CopyOnWriteArrayList',t:'List',r:'I'},
+  // Set
+  {f:'Set',t:'Collection',r:'E'},
+  {f:'SortedSet',t:'Set',r:'E'},{f:'NavigableSet',t:'SortedSet',r:'E'},
+  {f:'AbstractSet',t:'AbstractCollection',r:'E'},{f:'AbstractSet',t:'Set',r:'I'},
+  {f:'HashSet',t:'AbstractSet',r:'E'},{f:'HashSet',t:'Set',r:'I'},
+  {f:'LinkedHashSet',t:'HashSet',r:'E'},{f:'LinkedHashSet',t:'Set',r:'I'},
+  {f:'TreeSet',t:'AbstractSet',r:'E'},{f:'TreeSet',t:'NavigableSet',r:'I'},{f:'TreeSet',t:'SortedSet',r:'I'},
+  {f:'EnumSet',t:'AbstractSet',r:'E'},
+  {f:'CopyOnWriteArraySet',t:'AbstractSet',r:'E'},{f:'CopyOnWriteArraySet',t:'Set',r:'I'},
+  // Queue
+  {f:'Queue',t:'Collection',r:'E'},
+  {f:'Deque',t:'Queue',r:'E'},
+  {f:'BlockingQueue',t:'Queue',r:'E'},
+  {f:'BlockingDeque',t:'Deque',r:'E'},{f:'BlockingDeque',t:'BlockingQueue',r:'E'},
+  {f:'TransferQueue',t:'BlockingQueue',r:'E'},
+  {f:'AbstractQueue',t:'AbstractCollection',r:'E'},{f:'AbstractQueue',t:'Queue',r:'I'},
+  {f:'ArrayDeque',t:'Deque',r:'I'},
+  {f:'PriorityQueue',t:'AbstractQueue',r:'E'},
+  {f:'LinkedBlockingQueue',t:'BlockingQueue',r:'I'},
+  {f:'ArrayBlockingQueue',t:'BlockingQueue',r:'I'},
+  {f:'PriorityBlockingQueue',t:'BlockingQueue',r:'I'},
+  {f:'DelayQueue',t:'BlockingQueue',r:'I'},
+  {f:'SynchronousQueue',t:'BlockingQueue',r:'I'},
+  {f:'LinkedTransferQueue',t:'TransferQueue',r:'I'},
+  {f:'LinkedBlockingDeque',t:'BlockingDeque',r:'I'},
+  {f:'ConcurrentLinkedQueue',t:'Queue',r:'I'},
+  {f:'ConcurrentLinkedDeque',t:'Deque',r:'I'},
+  // Map
+  {f:'SortedMap',t:'Map',r:'E'},{f:'NavigableMap',t:'SortedMap',r:'E'},
+  {f:'ConcurrentMap',t:'Map',r:'E'},
+  {f:'ConcurrentNavigableMap',t:'ConcurrentMap',r:'E'},{f:'ConcurrentNavigableMap',t:'NavigableMap',r:'E'},
+  {f:'AbstractMap',t:'Map',r:'I'},
+  {f:'HashMap',t:'AbstractMap',r:'E'},{f:'HashMap',t:'Map',r:'I'},
+  {f:'LinkedHashMap',t:'HashMap',r:'E'},{f:'LinkedHashMap',t:'Map',r:'I'},
+  {f:'WeakHashMap',t:'AbstractMap',r:'E'},{f:'WeakHashMap',t:'Map',r:'I'},
+  {f:'IdentityHashMap',t:'AbstractMap',r:'E'},{f:'IdentityHashMap',t:'Map',r:'I'},
+  {f:'EnumMap',t:'AbstractMap',r:'E'},{f:'EnumMap',t:'Map',r:'I'},
+  {f:'TreeMap',t:'AbstractMap',r:'E'},{f:'TreeMap',t:'NavigableMap',r:'I'},{f:'TreeMap',t:'SortedMap',r:'I'},
+  {f:'ConcurrentHashMap',t:'AbstractMap',r:'E'},{f:'ConcurrentHashMap',t:'ConcurrentMap',r:'I'},
+  {f:'ConcurrentSkipListMap',t:'AbstractMap',r:'E'},{f:'ConcurrentSkipListMap',t:'ConcurrentNavigableMap',r:'I'},
+  {f:'Hashtable',t:'Map',r:'I'},
+  {f:'Properties',t:'Hashtable',r:'E'},
+  // Iterator
+  {f:'ListIterator',t:'Iterator',r:'E'},
+];
+
+// ─── BUILD NODES ─────────────────────────────────────────
+const world = document.getElementById('world');
+const svg   = document.getElementById('svg-edges');
+const kindMap = {I:'«interface»', A:'«abstract»', C:'class', L:'legacy class'};
+const nodeEls = {};
+const nodePos = {}; // live positions
+
+nodes.forEach(n => {
+  const el = document.createElement('div');
+  el.className = `node t${n.t}`;
+  el.id = `n-${n.id}`;
+  el.style.left = n.x + 'px';
+  el.style.top  = n.y + 'px';
+  el.innerHTML = `
+    <div class="node-head">
+      <div class="node-kind">${kindMap[n.t]}</div>
+      <div class="node-name">${n.label}</div>
+      <div class="node-pkg">${n.pkg}</div>
+    </div>
+    <div class="node-body">${n.body}</div>
+  `;
+  world.appendChild(el);
+  nodeEls[n.id] = el;
+  nodePos[n.id] = { x: n.x, y: n.y };
+
+  // Click → info panel
+  el.addEventListener('click', e => { e.stopPropagation(); openPanel(n); });
+
+  // Drag
+  makeDraggable(el, n.id);
+});
+
+// ─── DRAG ────────────────────────────────────────────────
+function makeDraggable(el, id) {
+  let startX, startY, origX, origY, moved;
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    startX = e.clientX; startY = e.clientY;
+    origX = nodePos[id].x; origY = nodePos[id].y;
+    moved = false;
+    el.classList.add('dragging');
+    const onMove = ev => {
+      const dx = (ev.clientX - startX) / scale;
+      const dy = (ev.clientY - startY) / scale;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+      nodePos[id].x = origX + dx;
+      nodePos[id].y = origY + dy;
+      el.style.left = nodePos[id].x + 'px';
+      el.style.top  = nodePos[id].y + 'px';
+      drawEdges();
+    };
+    const onUp = ev => {
+      el.classList.remove('dragging');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (!moved) openPanel(nodes.find(n=>n.id===id));
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+}
+
+// ─── DEFS FOR ARROWS ─────────────────────────────────────
+const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+[['E','#ffd166'],['I','#ff6b9d']].forEach(([id,col])=>{
+  const m = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  m.setAttribute('id',`arr-${id}`);
+  m.setAttribute('markerWidth','8'); m.setAttribute('markerHeight','6');
+  m.setAttribute('refX','7'); m.setAttribute('refY','3');
+  m.setAttribute('orient','auto');
+  const p = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  p.setAttribute('points','0 0,8 3,0 6'); p.setAttribute('fill',col);
+  m.appendChild(p); defs.appendChild(m);
+});
+svg.appendChild(defs);
+
+// ─── DRAW EDGES ──────────────────────────────────────────
+function getBounds(id) {
+  const el = nodeEls[id];
+  const pos = nodePos[id];
+  const w = el.offsetWidth  || 180;
+  const h = el.offsetHeight || 70;
+  return { l:pos.x, t:pos.y, r:pos.x+w, b:pos.y+h, cx:pos.x+w/2, cy:pos.y+h/2, w, h };
+}
+
+function drawEdges() {
+  svg.querySelectorAll('.edge').forEach(e=>e.remove());
+  edges.forEach(ed => {
+    if (!nodeEls[ed.f] || !nodeEls[ed.t]) return;
+    const f = getBounds(ed.f), t = getBounds(ed.t);
+    const isE = ed.r === 'E';
+    const col  = isE ? '#ffd166' : '#ff6b9d';
+    const dash = isE ? 'none' : '6 3';
+
+    // Pick best edge exit/entry
+    const dx = t.cx - f.cx, dy = t.cy - f.cy;
+    let fx, fy, tx, ty;
+    if (Math.abs(dy) >= Math.abs(dx)) {
+      fx = f.cx; fy = dy < 0 ? f.t : f.b;
+      tx = t.cx; ty = dy < 0 ? t.b : t.t;
+    } else {
+      fy = f.cy; fx = dx < 0 ? f.l : f.r;
+      ty = t.cy; tx = dx < 0 ? t.r : t.l;
+    }
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const midY = (fy + ty) / 2;
+    path.setAttribute('d',`M${fx},${fy} C${fx},${midY} ${tx},${midY} ${tx},${ty}`);
+    path.setAttribute('stroke', col);
+    path.setAttribute('stroke-width', '1.4');
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke-dasharray', dash);
+    path.setAttribute('opacity','0.5');
+    path.setAttribute('marker-end',`url(#arr-${ed.r})`);
+    path.classList.add('edge');
+    svg.appendChild(path);
+  });
+}
+requestAnimationFrame(()=>requestAnimationFrame(drawEdges));
+
+// ─── CANVAS PAN + ZOOM ───────────────────────────────────
+let scale = 0.52, panX = 40, panY = 20;
+let panning = false, px = 0, py = 0;
+
+function applyT() {
+  world.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+}
+applyT();
+
+const wrap = document.getElementById('wrap');
+wrap.addEventListener('mousedown', e => {
+  if (e.target.closest('.node')) return;
+  panning = true; px = e.clientX; py = e.clientY;
+  wrap.classList.add('panning');
+});
+window.addEventListener('mousemove', e => {
+  if (!panning) return;
+  panX += e.clientX - px; panY += e.clientY - py;
+  px = e.clientX; py = e.clientY; applyT();
+});
+window.addEventListener('mouseup', () => { panning = false; wrap.classList.remove('panning'); });
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY < 0 ? 1.1 : 0.91;
+  const r = wrap.getBoundingClientRect();
+  const ox = e.clientX - r.left, oy = e.clientY - r.top;
+  panX = ox - (ox - panX) * f;
+  panY = oy - (oy - panY) * f;
+  scale = Math.min(3, Math.max(0.1, scale * f));
+  applyT();
+}, {passive:false});
+
+function resetView() { scale=0.52; panX=40; panY=20; applyT(); }
+function doZoom(f)   { scale=Math.min(3,Math.max(0.1,scale*f)); applyT(); }
+
+// Close panel when clicking canvas
+wrap.addEventListener('click', () => closePanel());
+
+// ─── INFO PANEL ──────────────────────────────────────────
+const panel = document.getElementById('info-panel');
+const colMap = { I:'var(--I)', A:'var(--A)', C:'var(--C)', L:'var(--L)' };
+
+function openPanel(n) {
+  const d = n.info;
+  const colStyle = `color:${colMap[n.t]}`;
+  let html = `<h2 style="${colStyle}">${n.label}</h2>`;
+  html += `<div class="pkg">${n.pkg} &nbsp;·&nbsp; ${kindMap[n.t]}</div>`;
+
+  html += `<div class="info-section"><h3>Description</h3><p>${d.desc}</p></div>`;
+
+  if (d.methods && d.methods.length) {
+    html += `<div class="info-section"><h3>Key Methods / Complexity</h3><ul>`;
+    d.methods.forEach(m => html += `<li><code>${m}</code></li>`);
+    html += `</ul>`;
+    if (d.complexity && d.complexity.length) {
+      html += `<div class="complexity-row">`;
+      d.complexity.forEach(c => html += `<span class="chip ${c.cls||''}">${c.label}</span>`);
+      html += `</div>`;
+    }
+    html += `</div>`;
+  } else if (d.complexity && d.complexity.length) {
+    html += `<div class="info-section"><h3>Complexity</h3><div class="complexity-row">`;
+    d.complexity.forEach(c => html += `<span class="chip ${c.cls||''}">${c.label}</span>`);
+    html += `</div></div>`;
+  }
+
+  if (d.tips && d.tips.length) {
+    html += `<div class="info-section"><h3>⚡ Key Points to Remember</h3><ul>`;
+    d.tips.forEach(t => html += `<li>${t}</li>`);
+    html += `</ul></div>`;
+  }
+
+  // Relations
+  const ext = edges.filter(e=>e.f===n.id&&e.r==='E').map(e=>e.t);
+  const imp = edges.filter(e=>e.f===n.id&&e.r==='I').map(e=>e.t);
+  const extBy = edges.filter(e=>e.t===n.id&&e.r==='E').map(e=>e.f);
+  const impBy = edges.filter(e=>e.t===n.id&&e.r==='I').map(e=>e.f);
+  let relHtml = '';
+  if(ext.length)   relHtml += `<div><span style="color:var(--ext)">extends →</span> ${ext.join(', ')}</div>`;
+  if(imp.length)   relHtml += `<div><span style="color:var(--imp)">implements →</span> ${imp.join(', ')}</div>`;
+  if(extBy.length) relHtml += `<div><span style="color:var(--muted)">extended by ←</span> ${extBy.join(', ')}</div>`;
+  if(impBy.length) relHtml += `<div><span style="color:var(--muted)">implemented by ←</span> ${impBy.slice(0,6).join(', ')}${impBy.length>6?'…':''}</div>`;
+  if(relHtml) html += `<div class="info-section"><h3>Relationships</h3>${relHtml}</div>`;
+
+  if (d.qs && d.qs.length) {
+    html += `<div class="info-section"><h3>🎯 Interview Questions</h3>`;
+    d.qs.forEach(q => {
+      html += `<div class="interview-q">
+        <div class="qlabel">Q</div>
+        <p><strong style="color:var(--text)">${q.q}</strong></p>
+        <p style="margin-top:5px">${q.a}</p>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById('panel-content').innerHTML = html;
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  panel.classList.remove('open');
+}
+</script>
+</body>
+</html>
