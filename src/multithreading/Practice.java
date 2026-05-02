@@ -9,5 +9,11 @@ public class Practice {
         }
     });
 
+    public static void main(String[] args) {
+        synchronized (new Practice()) {
+            System.out.println("Hello");
+        }
+    }
+
 
 }
